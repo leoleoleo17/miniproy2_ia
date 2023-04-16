@@ -1,7 +1,8 @@
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-
+import random
+from collections import namedtuple
 class triangulo_magico:
     '''
     @Autores: Juan Esteban Gonzalez y Leonardo Luengas
@@ -14,10 +15,13 @@ class triangulo_magico:
     '''
     def __init__(self, n=3):
         '''
-        Inicializa el triángulo mágico con 0 en cada uno de los nodos de las aristas y n vértices en cada lado.
+        Inicializa el triángulo mágico con una asignación aleatoria de números.
         '''
-        self.estado_inicial=[0 for x in range(3*(n-1))]
+        l = [x for x in range(1,3*n-2)]
+        random.shuffle(l)
+        self.estado_inicial= l
         self.vertices = n
+        self.max = max(l)
         
     def pintar_estado(self,estado):
         '''
@@ -46,24 +50,32 @@ class triangulo_magico:
     def acciones_aplicables(self, estado):
         '''
         Input: estado, una lista que representa el triángulo mágico con n vértices en cada lado
-        Output: Una lista con todas las parejas ordenadas que se pueden generar
+        Output: Una lista con todas las tuplas que se pueden intercambiar para un estado. Son listas con dos tuplas de la forma
+        (indice_del_elemento, elemento)
         '''
         assert len(estado) == len(self.estado_inicial), f"{estado} no es compatible con un triangulo mágico de {self.vertices} vértices" 
         res = []
         tot = 3*(self.vertices-1)+1
-        for x, v in enumerate(estado):
-            temp = [(x,y) for y in range(1,tot) if v != y]
-            res = res + temp
-        return res
+        for i, e in enumerate(estado):
+            if e != self.max:
+                inicial = (i,e)
+                temp = [(f,y) for f,y in enumerate(estado) if y != e and y != self.max]
+                for x in temp:
+                    new = [(x,inicial)]
+                    res += new
+        #Truncar las acciones aplicables a 5 seleccionadas aleatoriamente para acelerar la convergencia de una solución
+        res_trunc = random.choices(res, k=5)
+        return res_trunc
     
     def transicion(self, estado, accion):
         '''
         Input: estado, una lista que representa un estado del problema del triángulo mágico con n vértices en cada lado
-               accion, una tupla con dos elementos que representan el índice de un elemento de la lista y el valor con el cual
-               se va a reemplazar dicho índice.
+               accion, una lista con dos tuplas de la forma (indice_del_elemento, elemento).
         Output: lista con la acción ya aplicada
         '''
-        estado[accion[0]]=accion[1]
+        assert len(accion) == 2 and accion[0][1] in self.estado_inicial and accion[1][1] in self.estado_inicial, "La acción no es válida"
+        estado[accion[0][0]] = accion[1][1]
+        estado[accion[1][0]] = accion[0][1]
         return estado
     
     def test_objetivo(self, estado):
@@ -101,4 +113,40 @@ class triangulo_magico:
         cod = ''
         for x in estado:
             cod += str(x)
-        return cod  
+        return cod 
+
+Tupla = namedtuple('Tupla', ['elemento', 'valor'])
+#ListaPrioritaria modificada para contener un máximo de 1000 elementos
+class ListaPrioritaria():
+    
+    def __init__(self):
+        self.pila = []
+        
+    def __len__(self):
+        return len(self.pila)
+
+    def push(self, elemento, valor):
+          if len(self.pila) != 1000:
+            tupla = Tupla(elemento, valor)
+            self.pila.append(tupla)
+            self.pila.sort(key=lambda x: x[1])
+            
+    def pop(self):
+        return self.pila.pop(0)[0]
+    
+    def is_empty(self):
+        return len(self.pila) == 0
+    
+    def __len__(self):
+        return len(self.pila)
+
+    def __str__(self):
+        cadena = '['
+        inicial = True
+        for elemento, valor in self.pila:
+            if inicial:
+                cadena += '(' + str(elemento) + ',' + str(valor) + ')'
+                inicial = False
+            else:
+                cadena += ', (' + str(elemento) + ',' + str(valor) + ')'
+        return cadena + ']'      
